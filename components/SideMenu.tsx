@@ -2,14 +2,13 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -22,13 +21,43 @@ import {
 import { iconMap, navItems } from '@/lib/constants'
 import { CircleUser } from 'lucide-react'
 import Image from 'next/image'
+import { Button } from '@/components/ui/button'
+
+type AuthUser = {
+  id: number
+  name: string
+  email: string
+}
 
 type SideMenuProps = {
   children: React.ReactNode
 }
 
 const SideMenu: React.FC<SideMenuProps> = ({ children }) => {
+  const router = useRouter()
   const pathname = usePathname() || '/'
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false)
+  const [user, setUser] = React.useState<AuthUser | null>(null)
+
+  React.useEffect(() => {
+    const rawUser = localStorage.getItem('fineTrackerUser')
+
+    if (!rawUser) {
+      return
+    }
+
+    try {
+      setUser(JSON.parse(rawUser) as AuthUser)
+    } catch {
+      localStorage.removeItem('fineTrackerUser')
+    }
+  }, [])
+
+  const onSignOut = () => {
+    localStorage.removeItem('fineTrackerUser')
+    setIsProfileMenuOpen(false)
+    router.push('/sign-in')
+  }
 
   return (
     <SidebarProvider>
@@ -77,14 +106,30 @@ const SideMenu: React.FC<SideMenuProps> = ({ children }) => {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <div className="bg-sidebar-accent/40 flex items-center gap-3 rounded-md px-3 py-2">
-            <CircleUser className="h-9 w-9" />
-            <div className="min-w-0">
-              <p className="text-sm font-medium leading-tight">Fine Tracker</p>
-              <p className="text-xs text-sidebar-foreground/70">
-                admin@fine-tracker.app
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+              className="bg-sidebar-accent/40 flex w-full items-center gap-3 rounded-md px-3 py-2 text-left"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold text-sm">
+              {user?.name?.[0]?.toUpperCase() ?? 'F'}
+              </div>
+              <div className="min-w-0">
+              <p className="truncate text-sm font-medium leading-tight">{user?.name ?? 'Fine Tracker'}</p>
+              <p className="truncate text-xs text-sidebar-foreground/70">
+                {user?.email ?? 'admin@fine-tracker.app'}
               </p>
-            </div>
+              </div>
+            </button>
+
+            {isProfileMenuOpen ? (
+              <div className="bg-background absolute bottom-14 left-0 z-10 w-full rounded-md border p-2 shadow-sm">
+                <Button type="button" variant="ghost" className="w-full justify-start" onClick={onSignOut}>
+                  Sign Out
+                </Button>
+              </div>
+            ) : null}
           </div>
         </SidebarFooter>
       </Sidebar>

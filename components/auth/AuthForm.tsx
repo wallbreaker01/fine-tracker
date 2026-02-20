@@ -21,6 +21,11 @@ type AuthFormProps = {
 type AuthResponse = {
     success: boolean
     message: string
+    user?: {
+        id: number
+        name: string
+        email: string
+    }
 }
 
 function mapZodIssues<T extends string>(issues: ZodIssue[]): Partial<Record<T, string>> {
@@ -120,6 +125,10 @@ export function AuthForm({ mode }: AuthFormProps) {
             if (!result.success) {
                 setFeedback({ type: "error", message: result.message })
                 return
+            }
+
+            if (result.user) {
+                localStorage.setItem("fineTrackerUser", JSON.stringify(result.user))
             }
 
             setFeedback({ type: "success", message: result.message })

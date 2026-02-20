@@ -42,6 +42,11 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: `Welcome back, ${user.name}`,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
     });
   } catch {
     return NextResponse.json(
