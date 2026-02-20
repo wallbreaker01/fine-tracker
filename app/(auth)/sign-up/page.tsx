@@ -1,9 +1,5 @@
-import React from 'react'
+import { AuthForm } from "@/components/auth/AuthForm"
 
-const page = () => {
-  return (
-    <div>page</div>
-  )
+export default function SignUpPage() {
+  return <AuthForm mode="sign-up" />
 }
-
-export default page

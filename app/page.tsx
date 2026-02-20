@@ -1,9 +1,9 @@
-import React from 'react'
+import { AuthForm } from "@/components/auth/AuthForm"
 
-const page = () => {
+export default function HomePage() {
   return (
-    <div>page</div>
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <AuthForm mode="sign-in" />
+    </main>
   )
 }
-
-export default page
