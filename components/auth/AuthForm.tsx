@@ -7,8 +7,7 @@ import { ZodIssue } from "zod"
 
 import { FormField } from "@/components/auth/FormField"
 import { Button } from "@/components/ui/button"
-import { signInMock, signUpMock } from "@/lib/auth/mock-auth"
-import {SignInInput,SignUpInput,signInSchema,signUpSchema,} from "@/lib/validations/formValidation"
+import { SignInInput, SignUpInput, signInSchema, signUpSchema, } from "@/lib/validations/formValidation"
 
 type Mode = "sign-in" | "sign-up"
 
@@ -17,6 +16,11 @@ type SignUpErrors = Partial<Record<keyof SignUpInput, string>>
 
 type AuthFormProps = {
     mode: Mode
+}
+
+type AuthResponse = {
+    success: boolean
+    message: string
 }
 
 function mapZodIssues<T extends string>(issues: ZodIssue[]): Partial<Record<T, string>> {
@@ -42,10 +46,29 @@ const signUpInitialState: SignUpInput = {
 }
 
 const authRoutes = {
-    signIn: "/",
+    signIn: "/sign-in",
     signUp: "/sign-up",
     dashboard: "/dashboard",
 } as const
+
+async function postAuth(endpoint: string, payload: SignInInput | SignUpInput): Promise<AuthResponse> {
+    const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    })
+
+    const data = (await response.json()) as AuthResponse
+
+    if (!response.ok) {
+        return {
+            success: false,
+            message: data.message || "Authentication failed",
+        }
+    }
+
+    return data
+}
 
 export function AuthForm({ mode }: AuthFormProps) {
     const router = useRouter()
@@ -91,7 +114,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             }
 
             setIsSubmitting(true)
-            const result = await signInMock(parsed.data)
+            const result = await postAuth("/api/auth/sign-in", parsed.data)
             setIsSubmitting(false)
 
             if (!result.success) {
@@ -111,7 +134,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         }
 
         setIsSubmitting(true)
-        const result = await signUpMock(parsed.data)
+        const result = await postAuth("/api/auth/sign-up", parsed.data)
         setIsSubmitting(false)
 
         if (!result.success) {
@@ -120,7 +143,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         }
 
         setFeedback({ type: "success", message: result.message })
-        router.push(authRoutes.dashboard)
+        router.push(authRoutes.signIn)
     }
 
     return (
@@ -179,9 +202,18 @@ export function AuthForm({ mode }: AuthFormProps) {
                 ) : null}
 
                 <Button className="w-full" type="submit" disabled={isSubmitting}>
-                    {isSubmitting? "Please wait..." : submitLabel}
+                    {isSubmitting ? "Please wait..." : submitLabel}
                 </Button>
             </form>
+
+            {feedback ? (
+                <p
+                    className={`mt-3 text-sm ${feedback.type === "error" ? "text-destructive" : "text-green-600"
+                        }`}
+                >
+                    {feedback.message}
+                </p>
+            ) : null}
 
             <p className="mt-4 text-sm text-muted-foreground">
                 {altPrompt}

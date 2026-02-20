@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation"
+import { AuthForm } from "@/components/auth/AuthForm"
 
 export default function SignInPage() {
-  redirect("/")
+  return <AuthForm mode="sign-in" />
 }
