@@ -32,6 +32,30 @@ function ZodValidation(issues: any[]): SignInErrors | SignUpErrors {
     return errorMap as SignInErrors | SignUpErrors
 }
 
+type AuthApiResponse = {
+    success: boolean
+    message?: string
+    user?: { id: number; name: string; email: string; avatar?: string | null }
+}
+
+function mapApiErrorToFields(
+    message: string | undefined,
+    isSignIn: boolean,
+): SignInErrors | SignUpErrors {
+    const fallback = message ?? "Something went wrong. Please try again."
+    const lower = fallback.toLowerCase()
+
+    if (lower.includes("already exists")) {
+        return { email: fallback }
+    }
+
+    if (lower.includes("invalid email or password")) {
+        return { password: fallback }
+    }
+
+    return isSignIn ? { email: fallback } : { email: fallback }
+}
+
 
 export function AuthFormProvider({ children, mode }: { children: React.ReactNode, mode: mode }) {
     const router = useRouter()
@@ -57,8 +81,9 @@ export function AuthFormProvider({ children, mode }: { children: React.ReactNode
             return;
         }
         setIsSubmitting(true)
+        setSuccessMessage(null)
         const endpoint = isSignIn ? "/api/auth/sign-in" : "/api/auth/sign-up"
-        let result: any
+        let result: AuthApiResponse
         try {
             const response = await fetch(endpoint, {
                 method: "POST",
@@ -66,32 +91,36 @@ export function AuthFormProvider({ children, mode }: { children: React.ReactNode
                 body: JSON.stringify(formData),
             })
             result = await response.json()
-        } catch (error) {
-            setErrors({} as SignInErrors)
+        } catch {
+            setErrors(mapApiErrorToFields("Unable to connect. Please try again.", isSignIn))
             setIsSubmitting(false)
             return
         }
-        
+
         if (!result.success) {
-            setErrors(result.error)
+            setErrors(mapApiErrorToFields(result.message, isSignIn))
             setIsSubmitting(false)
-            return;
-        }
-        
-        if (isSignIn) { 
-            if(result.user){
-                localStorage.setItem('fineTrackerUser', JSON.stringify(result.user))
-                // Dispatch event so SideMenu can update
-                window.dispatchEvent(new CustomEvent('fineTrackerUserUpdated'))
-                router.push(authRoutes.dashboard)
-            }
-        } else {
-            setSuccessMessage("Account created successfully! Redirecting to sign in...")
-            setTimeout(() => {
-                router.push(authRoutes.signIn)
-            }, 2000)
+            return
         }
 
+        if (isSignIn) {
+            if (result.user) {
+                localStorage.setItem("fineTrackerUser", JSON.stringify(result.user))
+                window.dispatchEvent(new CustomEvent("fineTrackerUserUpdated"))
+                router.push(authRoutes.dashboard)
+                return
+            }
+
+            setErrors(mapApiErrorToFields("Unable to sign in right now.", isSignIn))
+            setIsSubmitting(false)
+            return
+        }
+
+        setIsSubmitting(false)
+        setSuccessMessage("Account created successfully! Redirecting to sign in...")
+        setTimeout(() => {
+            router.push(authRoutes.signIn)
+        }, 2000)
     }
     const values = { mode, isSignIn, formData, errors, isSubmitting, successMessage, handleInputChange, handleSubmit }
 
